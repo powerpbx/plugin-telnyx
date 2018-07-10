@@ -5,7 +5,7 @@ playSMS gateway plugin for Easy Send SMS online SMS gateway provider.
 Info          | Value
 ------------- | ---------------------------------
 Author        | PowerPBX `<support@powerpbx.org>`
-Update        | 180701
+Update        | 180710
 Version       | 1.0
 Compatible    | playSMS 1.1 and above
 playSMS       | https://playsms.org
