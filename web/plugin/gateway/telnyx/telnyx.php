@@ -58,16 +58,17 @@ switch (_OP_) {
 	case "manage_save":
 		//$up_url = ($_REQUEST['up_url'] ? $_REQUEST['up_url'] : $plugin_config['telnyx']['default_url']);
 		$up_url = $plugin_config['telnyx']['url'];
-		$up_user = $_REQUEST['up_user'];
+		$up_callback_url = _HTTP_PATH_PLUG_ . '/gateway/telnyx/callback.php';
 		$up_password = $_REQUEST['up_password'];
 		$up_module_sender = $_REQUEST['up_module_sender'];
 		$up_datetime_timezone = $_REQUEST['up_datetime_timezone'];
+
 		if ($up_url) {
 			$items = array(
 				'url' => $up_url,
-				'user' => $up_user,
+				'callback_url' => $up_callback_url,
 				'module_sender' => $up_module_sender,
-				'datetime_timezone' => $up_datetime_timezone 
+				'datetime_timezone' => $up_datetime_timezone
 			);
 			if ($up_password) {
 				$items['password'] = $up_password;

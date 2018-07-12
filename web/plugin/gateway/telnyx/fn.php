@@ -52,7 +52,7 @@ function telnyx_hook_sendsms($smsc, $sms_sender, $sms_footer, $sms_to, $sms_msg,
 	
 	// no sender config yet	
 	//if ($sms_sender && $sms_to && $sms_msg) {
-	if ($sms_to && $sms_msg) {
+	if ($sms_to && $sms_to && $sms_msg) {
 		
 		$c_sms_type = ( $sms_type == "flash" ? 2 : 0 );
 		
@@ -68,61 +68,84 @@ function telnyx_hook_sendsms($smsc, $sms_sender, $sms_footer, $sms_to, $sms_msg,
 		}
 		
 		// https://developers.telnyx.com/docs/messaging
-		$url = $plugin_config['telnyx']['url'] . "?";
-		$url .= "&password=" . $plugin_config['telnyx']['password'];
-		$url .= "&from=" . urlencode($sms_sender);
-		$url .= "&to=" . urlencode($sms_to);
-		$url .= "&text=" . urlencode($sms_msg);
-		$url .= "&tipe=" . $c_sms_type;
-		$url = trim($url);
-		
-		_log("send url:[" . $url . "]", 3, "telnyx_hook_sendsms");
-		
-		// send it
-		$response = file_get_contents($url);
-		
-		/*
-		 * OK:1234567891011
-		 * ERROR:1001
-		 */
-		
-		if ($response) {
-			$c_response = explode(':', $response);
-			
-			if (strtolower($c_response[0] == 'ok')) {
-				$c_message_id = $c_response[1];
-			}
-		
-			if (strtolower($c_response[0] == 'error')) {
-				$c_error_code = $c_response[1];
-			} else if ((int) $c_response[0]) {
-				$c_error_code = (int) $c_response[0];
-			}
+		$url = $plugin_config['telnyx']['url'] . '/messages';
+		$data = array(
+			'to' => $sms_to,
+			'from' => $sms_sender,
+			'body' => $sms_msg 
+		);
+		if ($plugin_config['telnyx']['callback_url']) {
+			$data['delivery_status_webhook_url'] = $plugin_config['telnyx']['callback_url'];
 		}
+
+		$data_string = json_encode($data);
+
+		$file = 'data_string.txt';
+			file_put_contents($file, $data_string);
+
+		if (function_exists('curl_init')) {
+			$ch = curl_init($url);
+
+			curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+    			'Content-Type: application/json',
+    			'x-profile-secret: ' . $plugin_config['telnyx']['password']
+			));
+			curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+			curl_setopt($ch, CURLOPT_POST, 1);
+			curl_setopt($ch, CURLOPT_POSTFIELDS, $data_string);
+			curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+			$returns = curl_exec($ch);
+			$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+			curl_close($ch);
+			_log("sendsms url:[" . $url . "] callback:[" . $data['delivery_status_webhook_url'], "] smsc:[" . $smsc . "]", 3, "telnyx_hook_sendsms");
+
+			$response = json_decode($returns);
+
+			$file = "plugin/gateway/telnyx/response.txt";
+			file_put_contents($file, $returns);
 		
-		// a single non-zero respond will be considered as a SENT response
-		if ($c_message_id) {
-			_log("sent smslog_id:" . $smslog_id . " message_id:" . $c_message_id . " smsc:" . $smsc, 2, "telnyx_hook_sendsms");
-			$db_query = "
-				INSERT INTO " . _DB_PREF_ . "_gatewayTelnyx_log (local_smslog_id, remote_smslog_id)
-				VALUES ('$smslog_id', '$c_message_id')";
-			$id = @dba_insert_id($db_query);
-			if ($id) {
-				$ok = true;
-				$p_status = 1;
-				dlr($smslog_id, $uid, $p_status);
+			if ($response->status) {
+				$c_status = $response->status;
+				$c_message_id = $response->sms_id;
+				$c_error_text = $c_status;
 			}
-		} else if ($c_error_code) {
-			_log("failed smslog_id:" . $smslog_id . " message_id:" . $c_message_id . " error_code:" . $c_error_code . " smsc:" . $smsc, 2, "telnyx_hook_sendsms");
+
+			if ($http_code != 200) {
+				$c_error_code = $http_code;
+			} 
+			
+			// a single non-zero respond will be considered as a SENT response
+			if ($c_message_id) {
+				_log("sent smslog_id:" . $smslog_id . " message_id:" . $c_message_id . " smsc:" . $smsc, 2, "telnyx_hook_sendsms");
+				$db_query = "
+					INSERT INTO " . _DB_PREF_ . "_gatewayTelnyx_log (local_smslog_id, remote_smslog_id)
+					VALUES ('$smslog_id', '$c_message_id')";
+				$id = @dba_insert_id($db_query);
+				if ($id && ($c_status == 'sending')) {
+					$ok = true;
+					$p_status = 1;
+				} else {
+					$p_status = 2;
+				}
+				dlr($smslog_id, $uid, $p_status);
+			} else if ($c_error_code) {
+				_log("failed smslog_id:" . $smslog_id . " message_id:" . $c_message_id . " error_code:" . $c_error_code . " smsc:" . $smsc, 2, "telnyx_hook_sendsms");
+			} else {
+				$resp = json_encode($response);
+				_log("invalid smslog_id:" . $smslog_id . " resp:[" . $resp . "] smsc:" . $smsc, 2, "telnyx_hook_sendsms");
+			}
 		} else {
-			$resp = $response;
-			_log("invalid smslog_id:" . $smslog_id . " resp:[" . $resp . "] smsc:" . $smsc, 2, "telnyx_hook_sendsms");
+			_log("fail to sendsms due to missing PHP curl functions", 3, "telnyx_hook_sendsms");
 		}
 	}
+
+
 	if (!$ok) {
 		$p_status = 2;
 		dlr($smslog_id, $uid, $p_status);
 	}
+
+	_log("sendsms end", 3, "telnyx_hook_sendsms");
 	
 	return $ok;
 }
