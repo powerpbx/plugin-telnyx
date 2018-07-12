@@ -16,6 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with playSMS. If not, see <http://www.gnu.org/licenses/>.
  */
+
 error_reporting(0);
 
 if (!$called_from_hook_call) {
@@ -27,7 +28,8 @@ if (!$called_from_hook_call) {
 	include "init.php";
 	include $core_config['apps_path']['libs'] . "/function.php";
 	chdir("plugin/gateway/telnyx/");
-	$requests = $_REQUEST;
+	$string = file_get_contents('php://input');
+	$requests = json_decode($string, true);
 }
 
 $log = '';
@@ -38,11 +40,11 @@ if (is_array($requests)) {
 	_log("pushed " . $log, 2, "telnyx callback");
 }
 
-$remote_smslog_id = $requests['messageid'];
+$remote_smslog_id = $requests['sms_id'];
 $message_status = $requests['status'];
 
 // delivery receipt
-if ($remote_smslog_id && $message_status) {
+if ($remote_smslog_id && $message_status && ($message_status != 'sending')) {
 	$db_query = "SELECT local_smslog_id FROM " . _DB_PREF_ . "_gatewayTelnyx_log WHERE remote_smslog_id='$remote_smslog_id'";
 	$db_result = dba_query($db_query);
 	$db_row = dba_fetch_array($db_result);
@@ -52,6 +54,9 @@ if ($remote_smslog_id && $message_status) {
 		$uid = $data['uid'];
 		$p_status = $data['p_status'];
 		switch ($message_status) {
+			case "sent":
+				$p_status = 1;
+				break; // sent
 			case "delivered":
 				$p_status = 3;
 				break; // delivered
@@ -71,7 +76,7 @@ if ($remote_smslog_id && $message_status) {
 // incoming message
 $sms_datetime = core_get_datetime();
 $sms_sender = $requests['from'];
-$message = htmlspecialchars_decode(urldecode($requests['message']));
+$message = htmlspecialchars_decode(urldecode($requests['body']));
 $sms_receiver = $requests['to'];
 $smsc = $requests['smsc'];
 if ($remote_smslog_id && $message) {
@@ -79,7 +84,7 @@ if ($remote_smslog_id && $message) {
 	$sms_sender = addslashes($sms_sender);
 	$message = addslashes($message);
 	recvsms($sms_datetime, $sms_sender, $message, $sms_receiver, $smsc);
-	
+
 	ob_end_clean();
 	echo "ACK/Telnyx";
 	exit();
