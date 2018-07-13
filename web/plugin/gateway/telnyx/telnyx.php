@@ -32,7 +32,6 @@ switch (_OP_) {
 				'DIALOG_DISPLAY' => _dialog(),
 				'Manage telnyx' => _('Manage telnyx'),
 				'Gateway name' => _('Gateway name'),
-				/* 'Easy Send SMS URL' => _mandatory(_('Easy Send SMS URL')), */
 				'User' => _('User'),
 				'Secret' => _('Secret'),
 				'Module sender ID' => _('Module sender ID'),
@@ -46,7 +45,6 @@ switch (_OP_) {
 				'HINT_TIMEZONE' => _hint(_('Eg: +0700 for Jakarta/Bangkok timezone')),
 				'BUTTON_BACK' => _back('index.php?app=main&inc=core_gateway&op=gateway_list'),
 				'status_active' => $status_active,
-				/* 'telnyx_param_url' => $plugin_config['telnyx']['url'], */
 				'telnyx_param_user' => $plugin_config['telnyx']['user'],
 				'telnyx_param_module_sender' => $plugin_config['telnyx']['module_sender'],
 				'telnyx_param_datetime_timezone' => $plugin_config['telnyx']['datetime_timezone'] 
@@ -56,7 +54,7 @@ switch (_OP_) {
 		break;
 	
 	case "manage_save":
-		//$up_url = ($_REQUEST['up_url'] ? $_REQUEST['up_url'] : $plugin_config['telnyx']['default_url']);
+	
 		$up_url = $plugin_config['telnyx']['url'];
 		$up_callback_url = _HTTP_PATH_PLUG_ . '/gateway/telnyx/callback.php';
 		$up_password = $_REQUEST['up_password'];

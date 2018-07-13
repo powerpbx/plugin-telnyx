@@ -1,6 +1,6 @@
-# plugin-easysendsms
+# plugin-telnyx
 
-playSMS gateway plugin for Easy Send SMS online SMS gateway provider.
+playSMS gateway plugin for Telnyx SIP provider.
 
 Info          | Value
 ------------- | ---------------------------------

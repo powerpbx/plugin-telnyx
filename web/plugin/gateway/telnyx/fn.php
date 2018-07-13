@@ -50,8 +50,7 @@ function telnyx_hook_sendsms($smsc, $sms_sender, $sms_footer, $sms_to, $sms_msg,
 		$sms_msg = $sms_msg . $sms_footer;
 	}
 	
-	// no sender config yet	
-	//if ($sms_sender && $sms_to && $sms_msg) {
+	// no sender config yet
 	if ($sms_to && $sms_to && $sms_msg) {
 		
 		$c_sms_type = ( $sms_type == "flash" ? 2 : 0 );
@@ -80,9 +79,6 @@ function telnyx_hook_sendsms($smsc, $sms_sender, $sms_footer, $sms_to, $sms_msg,
 
 		$data_string = json_encode($data);
 
-		$file = 'data_string.txt';
-			file_put_contents($file, $data_string);
-
 		if (function_exists('curl_init')) {
 			$ch = curl_init($url);
 
@@ -100,9 +96,6 @@ function telnyx_hook_sendsms($smsc, $sms_sender, $sms_footer, $sms_to, $sms_msg,
 			_log("sendsms url:[" . $url . "] callback:[" . $data['delivery_status_webhook_url'], "] smsc:[" . $smsc . "]", 3, "telnyx_hook_sendsms");
 
 			$response = json_decode($returns);
-
-			$file = "plugin/gateway/telnyx/response.txt";
-			file_put_contents($file, $returns);
 		
 			if ($response->status) {
 				$c_status = $response->status;
@@ -138,7 +131,6 @@ function telnyx_hook_sendsms($smsc, $sms_sender, $sms_footer, $sms_to, $sms_msg,
 			_log("fail to sendsms due to missing PHP curl functions", 3, "telnyx_hook_sendsms");
 		}
 	}
-
 
 	if (!$ok) {
 		$p_status = 2;
