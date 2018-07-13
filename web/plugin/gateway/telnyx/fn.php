@@ -105,6 +105,7 @@ function telnyx_hook_sendsms($smsc, $sms_sender, $sms_footer, $sms_to, $sms_msg,
 
 			if ($http_code != 200) {
 				$c_error_code = $http_code;
+				$c_error_message = $response->message;
 			} 
 			
 			// a single non-zero respond will be considered as a SENT response
@@ -122,7 +123,7 @@ function telnyx_hook_sendsms($smsc, $sms_sender, $sms_footer, $sms_to, $sms_msg,
 				}
 				dlr($smslog_id, $uid, $p_status);
 			} else if ($c_error_code) {
-				_log("failed smslog_id:" . $smslog_id . " message_id:" . $c_message_id . " error_code:" . $c_error_code . " smsc:" . $smsc, 2, "telnyx_hook_sendsms");
+				_log("failed smslog_id:" . $smslog_id . " message_id:" . $c_message_id . " error_code:" . $c_error_code . "error_message" . $c_error_message . " smsc:" . $smsc, 2, "telnyx_hook_sendsms");
 			} else {
 				$resp = json_encode($response);
 				_log("invalid smslog_id:" . $smslog_id . " resp:[" . $resp . "] smsc:" . $smsc, 2, "telnyx_hook_sendsms");
