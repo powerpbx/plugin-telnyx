@@ -4,7 +4,7 @@ playSMS gateway plugin for Telnyx SIP provider.
 
 Info          | Value
 ------------- | ---------------------------------
-Author        | PowerPBX `<support@powerpbx.org>`
+Author        | PowerPBX `<devops@powerpbx.org>`
 Update        | 180710
 Version       | 1.0
 Compatible    | playSMS 1.1 and above
