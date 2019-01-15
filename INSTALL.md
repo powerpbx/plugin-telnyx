@@ -13,7 +13,7 @@ Follow below steps in order:
 
    ```
    cd ~
-   git clone https://github.com/playsms/plugin-telnyx.git
+   git clone https://github.com/powerpbx/plugin-telnyx.git
    cd plugin-telnyx
    ```
 
