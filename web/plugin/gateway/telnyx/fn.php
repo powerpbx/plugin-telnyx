@@ -71,10 +71,10 @@ function telnyx_hook_sendsms($smsc, $sms_sender, $sms_footer, $sms_to, $sms_msg,
 		$data = array(
 			'to' => $sms_to,
 			'from' => $sms_sender,
-			'body' => $sms_msg 
+			'text' => $sms_msg 
 		);
 		if ($plugin_config['telnyx']['callback_url']) {
-			$data['delivery_status_webhook_url'] = $plugin_config['telnyx']['callback_url'];
+			$data['webhook_url'] = $plugin_config['telnyx']['callback_url'];
 		}
 
 		$data_string = json_encode($data);
@@ -84,7 +84,7 @@ function telnyx_hook_sendsms($smsc, $sms_sender, $sms_footer, $sms_to, $sms_msg,
 
 			curl_setopt($ch, CURLOPT_HTTPHEADER, array(
     			'Content-Type: application/json',
-    			'x-profile-secret: ' . $plugin_config['telnyx']['password']
+    			'Authorization: Bearer ' . $plugin_config['telnyx']['password']
 			));
 			curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 			curl_setopt($ch, CURLOPT_POST, 1);
@@ -93,19 +93,23 @@ function telnyx_hook_sendsms($smsc, $sms_sender, $sms_footer, $sms_to, $sms_msg,
 			$returns = curl_exec($ch);
 			$http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 			curl_close($ch);
-			_log("sendsms url:[" . $url . "] callback:[" . $data['delivery_status_webhook_url'], "] smsc:[" . $smsc . "]", 3, "telnyx_hook_sendsms");
+			_log("sendsms url:[" . $url . "] callback:[" . $data['webhook_url'] . "] smsc:[" . $smsc . "]", 2, "telnyx_hook_sendsms");
 
 			$response = json_decode($returns);
 		
-			if ($response->status) {
-				$c_status = $response->status;
-				$c_message_id = $response->sms_id;
-				$c_error_text = $c_status;
+			if (isset($response->data)) {
+				$c_message_id = $response->data->id;
+				if (isset($response->data->to) && is_array($response->data->to) && count($response->data->to) > 0) {
+					$c_status = $response->data->to[0]->status;
+					$c_error_text = $c_status;
+				}
 			}
 
 			if ($http_code != 200) {
 				$c_error_code = $http_code;
-				$c_error_message = $response->message;
+				if (isset($response->errors) && is_array($response->errors) && count($response->errors) > 0) {
+					$c_error_message = $response->errors[0]->detail;
+				}
 			} 
 			
 			// a single non-zero respond will be considered as a SENT response
@@ -115,7 +119,7 @@ function telnyx_hook_sendsms($smsc, $sms_sender, $sms_footer, $sms_to, $sms_msg,
 					INSERT INTO " . _DB_PREF_ . "_gatewayTelnyx_log (local_smslog_id, remote_smslog_id)
 					VALUES ('$smslog_id', '$c_message_id')";
 				$id = @dba_insert_id($db_query);
-				if ($id && ($c_status == 'sending')) {
+				if ($id && ($c_status == 'queued' || $c_status == 'sending' || $c_status == 'sent')) {
 					$ok = true;
 					$p_status = 1;
 				} else {
